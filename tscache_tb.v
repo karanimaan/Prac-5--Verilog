@@ -10,6 +10,8 @@ module TriggerSurroundCache_tb;
     reg clk;         // clock for TSC
     reg [7:0] adc_data;  // data from ADC
     reg req;         // request line to ADC
+    wire rdy;
+    wire [7:0] dat;
 
     // Outputs
     wire trd;         // trigger detected
@@ -17,6 +19,13 @@ module TriggerSurroundCache_tb;
     wire [31:0] trigtm;  // when trigger
     wire sd;          // serial data out
     
+  	ADC	adc_inst(
+    	.req(req),
+        .rst(rst),
+        .rdy(rdy),
+        .dat(dat)
+    );
+  
     // Instantiate the TSC module
     TriggerSurroundCache tsc (
         .reset(reset),
@@ -38,7 +47,7 @@ module TriggerSurroundCache_tb;
         reset = 1;
         start = 0;
         clk = 0;
-        adc_data = 8'h00;
+        adc_data = dat;
         req = 0;
         #10 reset = 0;
 //     end
