@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+//`timescale 1ns / 1ps
 
 module TriggerSurroundCache (
     input wire reset,       // reset when high
@@ -6,6 +6,7 @@ module TriggerSurroundCache (
     input wire clk,         // clock for TSC
     input wire [7:0] adc_data,  // data from ADC
     input wire req,         // request line to ADC
+  	input wire sbf,
     output reg trd,         // trigger detected
     output reg cd,          // completed data transfer
     output reg [31:0] trigtm,  // when trigger
@@ -15,31 +16,37 @@ module TriggerSurroundCache (
 // Internal state signals
 reg [3:0] current_state, next_state;
 
-// Internal signals
-reg [31:0] timer;
-reg [31:0] ring_buffer [0:31];
-reg [4:0] ring_head, ring_tail;
-reg [7:0] trigger_threshold;
-reg [31:0] buffer_data;
+// Internal signals including 32-bit timer, ring buffer,
+// and the bufferhead and tail
 
-// Parameter
-localparam 		 TRIGVL	 	   = 8'hD5; // example threshold value
-localparam [3:0] IDLE		   = 4'b0000;
-localparam [3:0] RUNNING       = 4'b0001;
-localparam [3:0] TRIGGERED     = 4'b0010;
-localparam [3:0] BUFFER_SEND   = 4'b0011;
+reg [31:0] timer; // timer register
+reg [31:0] ring_buffer [0:31]; // circular ring buffer register
+reg [4:0] ring_head, ring_tail; // 5-bit wide buffer head and tail
+reg [7:0] trigger_threshold; // ADC threshold value for trigger
+reg [31:0] buffer_data; // circular ring buffer data register
+
+// Local parameters
+localparam       TRIGVL        = 8'hD5; // example threshold value
+localparam [3:0] IDLE          = 4'b0000; // Idle state (default)
+localparam [3:0] RUNNING       = 4'b0001; // Running state
+localparam [3:0] TRIGGERED     = 4'b0010; // Trigger
+localparam [3:0] BUFFER_SEND   = 4'b0011; // Transmit data state
   
 // State register
 always @(posedge clk or posedge reset) begin
     if (reset) begin
-        current_state <= IDLE; // IDLE state
-        trd <= 1'b0;
-        cd <= 1'b0;
-        timer <= 32'b0;
-        ring_head <= 5'b0;
-        ring_tail <= 5'b0;
-        trigger_threshold <= TRIGVL;
-    end else begin
+        current_state <= IDLE; // start in IDLE
+        trd <= 1'b0;// no trigger detected
+        cd <= 1'b0;// transfer not completed
+        timer <= 32'b0; // timer counts up
+        ring_head <= 5'b0; // head of FIFO
+        ring_tail <= 5'b0; // tail of FIFO
+        trigger_threshold <= TRIGVL; // check trigger value
+    end 
+  	else if (sbf == 1'b1) begin 
+    	current_state <= BUFFER_SEND;
+    end
+  	else begin
         current_state <= next_state;
     end
 end
@@ -51,7 +58,7 @@ always @* begin
     sd = (current_state == BUFFER_SEND); // BUFFER_SEND state
 end
 
-// State transition and logic
+// State transition and combinational logic
 always @* begin
     case (current_state)
         IDLE: begin // IDLE state
@@ -59,6 +66,9 @@ always @* begin
                 next_state = RUNNING; // RUNNING state
             end else if (req && (adc_data >= trigger_threshold)) begin
                 next_state = TRIGGERED; // TRIGGERED state
+            end
+            else if (sbf == 1'b1) begin 
+    			current_state <= BUFFER_SEND;
             end else begin
                 next_state = IDLE; // IDLE state
             end
