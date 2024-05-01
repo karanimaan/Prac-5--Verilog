@@ -22,13 +22,6 @@ wire [7:0] dat;
 reg sbf;
 reg [3:0] state; // Added signal to monitor TSC state
 
-// ADC adc_inst (
-//     .req(req),
-//     .rst(reset),
-//   	.rdy(rdy),
-//     .dat(adc_data)
-// );
-  
 // Instantiate the TSC and ADC modules
 TriggerSurroundCache tsc_inst (
     .reset(reset),
@@ -97,11 +90,6 @@ initial begin
   	$dumpvars;
 end
 
-// Monitor ADC output
-// always @(posedge clk) begin
-//     $display("ADC Data: %h", adc_data);
-// end
-  
 always @* begin
     state <= tsc_inst.current_state;
 end

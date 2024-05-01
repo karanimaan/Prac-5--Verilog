@@ -1,4 +1,4 @@
-`include "adc.v"
+`include "adc2.v"
 `timescale 1ns / 1ps
 
 module TriggerSurroundCache (
@@ -26,11 +26,10 @@ reg [31:0] ring_buffer [0:31]; // circular ring buffer register
 reg [4:0] ring_head, ring_tail; // 5-bit wide buffer head and tail
 reg [7:0] trigger_threshold; // ADC threshold value for trigger
 reg [31:0] buffer_data; // circular ring buffer data register
-reg running; // Indicates whether the system is in the RUNNING state
 
 
 // Local parameters
-localparam       TRIGVL        = 8'hD4; // example threshold value
+localparam       TRIGVL        = 8'hD5; // example threshold value
 localparam [3:0] IDLE          = 4'b0000; // Idle state (default)
 localparam [3:0] RUNNING       = 4'b0001; // Running state
 localparam [3:0] TRIGGERED     = 4'b0010; // Trigger
@@ -48,19 +47,16 @@ always @(posedge clk or posedge reset) begin
     if (reset) begin
         current_state <= IDLE; // start in IDLE
         trd <= 1'b0;// no trigger detected
-        cd <= 1'b0;// transfer not completed
+        cd <= 1'b1;// transfer not completed
         timer <= 32'b0; // timer counts up
         ring_head <= 5'b0; // head of FIFO
         ring_tail <= 5'b0; // tail of FIFO
         trigger_threshold <= TRIGVL; // check trigger value
-    	running <= 0;
     end 
   	else begin
         current_state <= next_state;
     end
-  	if (start && !running) begin
-		current_state <= RUNNING;
-    end
+
 end
 
 // Output assignments
@@ -74,9 +70,8 @@ end
 always @* begin
     case (current_state)
         IDLE: begin // IDLE state
-          if (start && !running) begin
+          if (start) begin
                 next_state = RUNNING; // RUNNING state
-                running = 1; // Set running flag
             end
             else if (sbf) begin 
     			current_state <= BUFFER_SEND;
@@ -87,16 +82,15 @@ always @* begin
       RUNNING: begin // RUNNING state
             if (req && (adc_data >= trigger_threshold)) begin
                 next_state = TRIGGERED; // TRIGGERED state
-//               	running <= 0;
-            end else begin
-                next_state = RUNNING; // RUNNING state
+            end else if (adc_data >= trigger_threshold) begin
+            	next_state = TRIGGERED;
+              	trd <= 1'b1;
             end
-//         	if (adc_data >= trigger_threshold) begin
-//             	next_state = TRIGGERED;
-//               	running <= 0;
-//           	end else begin
-//               	next_state = RUNNING;
-//             end
+            else begin
+                next_state = RUNNING; // RUNNING state
+              	trd <= 1'b0;
+            end
+
         end
         TRIGGERED: begin // TRIGGERED state
             if (ring_tail < 31) begin
@@ -115,9 +109,8 @@ always @* begin
                 ring_head <= ring_head + 1;
             end
             if (ring_head == 31) begin
-                cd <= 1'b1;
+                cd <= 1'b0;
                 next_state = IDLE;// IDLE state
-//               	running <= 0;
             end else begin
                 next_state = BUFFER_SEND; // BUFFER_SEND state
             end
