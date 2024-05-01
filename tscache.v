@@ -44,7 +44,7 @@ ADC adc_inst (
   
 // State register
 always @(posedge clk or posedge reset) begin
-    if (reset) begin
+  	if (reset) begin
         current_state <= IDLE; // start in IDLE
         trd <= 1'b0;// no trigger detected
         cd <= 1'b1;// transfer not completed
@@ -56,9 +56,17 @@ always @(posedge clk or posedge reset) begin
   	else begin
         current_state <= next_state;
     end
-
 end
 
+// Increment the timer on every positive clock edge
+always @(posedge clk) begin
+    // Only increment the timer if not in reset state
+    if (!reset) begin
+        // Increment the timer by 1
+        timer <= timer + 1;
+    end
+end
+  
 // Output assignments
 always @* begin
     trd = (current_state == TRIGGERED); // TRIGGERED state
@@ -79,18 +87,16 @@ always @* begin
                 next_state = IDLE; // IDLE state
             end
         end
-      RUNNING: begin // RUNNING state
-            if (req && (adc_data >= trigger_threshold)) begin
-                next_state = TRIGGERED; // TRIGGERED state
-            end else if (adc_data >= trigger_threshold) begin
+      	RUNNING: begin // RUNNING state
+            if (adc_data >= trigger_threshold) begin
             	next_state = TRIGGERED;
               	trd <= 1'b1;
+              	trigtm <= timer;
             end
             else begin
                 next_state = RUNNING; // RUNNING state
               	trd <= 1'b0;
             end
-
         end
         TRIGGERED: begin // TRIGGERED state
             if (ring_tail < 31) begin
