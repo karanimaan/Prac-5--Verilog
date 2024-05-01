@@ -50,16 +50,24 @@ initial begin
   	req = 0;
 
 
-  	$display("reset \t start \t state");
-  	$monitor("%b \t %b \t %d", reset, start, state);
+  	$display("reset\t start\t req\t data\t trd\t sbf\t cd\t state");
+  	$monitor("%b\t %b\t %b\t %d\t %b\t %b\t %b\t %d", reset, start, req, adc_data, trd, sbf, cd, state);
 
     start = 0;
     reset = 0;
 
-  	#20 start = 1; #20 start = 0;
-    #5 reset = 1; #5 reset = 0;
+  	//#20 start = 1; #20 start = 0;
 
-  	
+    //#5 reset = 1; #5 reset = 0;
+
+    // Toggling req (request line)
+    for (i=0; i<15; i++) begin
+        if (state == 0) begin
+            #20 start = 1; #20 start = 0;   // This doesn't show first in $monitor, for some reason
+        end
+        #50 req = 1;
+        #50 req = 0;
+    end
 
 end
   
