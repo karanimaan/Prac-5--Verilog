@@ -50,49 +50,17 @@ initial begin
   	req = 0;
 
 
-  	$display("reset\t start \t state");
+  	$display("reset \t start \t state");
   	$monitor("%b \t %b \t %d", reset, start, state);
 
     start = 0;
     reset = 0;
 
   	#20 start = 1; #20 start = 0;
-    reset = 1; #5 reset = 0;
+    #5 reset = 1; #5 reset = 0;
 
   	
-//   	// read and display 10 values from ADC to see it is working
 
-
-    // Send REQ pulse to ADC to read next value
-    req = 1;
-    //       state = tsc_inst.current_state;
-    #5; // Pulse width of 5 ns
-    req = 0;
-    #5;
-
-
-
-  	#5
-
-    reset = 1;
-  	#10
-  	reset = 0;
-
-    start = 0;
-  	#5
-    req = 0;
-  	#5
-  	req = 1;
-  	#10
-  	sbf = 1;
-    #100 reset = 0; // Release reset after 100 ns
-
-    // Apply test vectors
-    #10 start = 1; // Start TSC operation
-    #10 reset = 1;
-  	#100
-	$finish;
-    // Continue applying test vectors...
 end
   
 
