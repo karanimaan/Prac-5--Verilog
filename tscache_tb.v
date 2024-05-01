@@ -34,7 +34,8 @@ TriggerSurroundCache tsc_inst (
   	.sbf(sbf),
   	.rdy(rdy),
     .trigtm(trigtm),
-    .sd(sd)
+    .sd(sd),
+    .current_state(state)
 );
 
 
@@ -55,19 +56,29 @@ initial begin
 //   	// read and display 10 values from ADC to see it is working
   	$display("RDY\t trd\t	cd\t	ADC_Data\t	TSC State\t");
     for (i=0; i<16; i++)	begin
-      // Send REQ pulse to ADC to read next value
-      req = 1;
-      //       state = tsc_inst.current_state;
-      #5; // Pulse width of 5 ns
-      req = 0;
-      #5;
-      $display("%b\t %b\t\t %b\t\t %d\t\t\t %d",rdy,trd,cd,adc_data,state); 
-    end    
+
+        // Start TSC if idle
+        if (state == 0)
+            begin
+                start = 1;
+                #20 start = 0;
+            end
+
+        // Send REQ pulse to ADC to read next value
+        req = 1;
+        //       state = tsc_inst.current_state;
+        #5; // Pulse width of 5 ns
+        req = 0;
+        #5;
+        $display("%b\t %b\t\t %b\t\t %d\t\t\t %d",rdy,trd,cd,adc_data,state);
+    end
+
   	#5
+
     reset = 1;
-  	#5
-  	#5
+  	#10
   	reset = 0;
+
     start = 0;
   	#5
     req = 0;
@@ -90,8 +101,6 @@ initial begin
   	$dumpvars;
 end
 
-always @* begin
-    state <= tsc_inst.current_state;
-end
+
 
 endmodule

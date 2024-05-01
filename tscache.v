@@ -12,11 +12,12 @@ module TriggerSurroundCache (
     output reg trd,         // trigger detected
     output reg cd,          // completed data transfer
     output reg [31:0] trigtm,  // when trigger
-    output reg sd           // serial data out
+    output reg sd,           // serial data out
+    output reg[3:0] current_state
 );
 
 // Internal state signals
-reg [3:0] current_state, next_state;
+reg [3:0] next_state;
 
 // Internal signals including 32-bit timer, ring buffer,
 // and the bufferhead and tail
@@ -53,9 +54,7 @@ always @(posedge clk or posedge reset) begin
         ring_tail <= 5'b0; // tail of FIFO
         trigger_threshold <= TRIGVL; // check trigger value
     end 
-  	else begin
-        current_state <= next_state;
-    end
+
 end
 
 // Increment the timer on every positive clock edge
@@ -123,6 +122,8 @@ always @* begin
         end
         default: next_state = IDLE; // IDLE state
     endcase
+
+    current_state = next_state;
 end
 
 endmodule
