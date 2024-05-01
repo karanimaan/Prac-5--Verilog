@@ -53,7 +53,7 @@ initial begin
   	#20 start = 0;
   	
 //   	// read and display 10 values from ADC to see it is working
-  	$display("RDY\t trd\t	cd\t	ADC_Data\t	TSC State\t");
+  	$display("i\t RDY\t trd\t	cd\t	ADC_Data\t	TSC State\t");
     for (i=0; i<16; i++)	begin
       // Send REQ pulse to ADC to read next value
       req = 1;
@@ -61,7 +61,7 @@ initial begin
       #5; // Pulse width of 5 ns
       req = 0;
       #5;
-      $display("%b\t %b\t\t %b\t\t %d\t\t\t %d",rdy,trd,cd,adc_data,state); 
+      $display("%d\t %b\t %b\t\t %b\t\t %d\t\t\t %d", i,rdy,trd,cd,adc_data,state);
     end    
   	#5
     reset = 1;
