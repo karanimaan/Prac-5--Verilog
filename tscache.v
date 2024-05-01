@@ -1,4 +1,4 @@
-`include "adc2.v"
+`include "adc.v"
 `timescale 1ns / 1ps
 
 module TriggerSurroundCache (
@@ -87,16 +87,16 @@ always @* begin
       RUNNING: begin // RUNNING state
             if (req && (adc_data >= trigger_threshold)) begin
                 next_state = TRIGGERED; // TRIGGERED state
-              	running <= 0;
+//               	running <= 0;
             end else begin
                 next_state = RUNNING; // RUNNING state
             end
-        	if (adc_data >= trigger_threshold) begin
-            	next_state = TRIGGERED;
-              	running <= 0;
-          	end else begin
-              	next_state = RUNNING;
-            end
+//         	if (adc_data >= trigger_threshold) begin
+//             	next_state = TRIGGERED;
+//               	running <= 0;
+//           	end else begin
+//               	next_state = RUNNING;
+//             end
         end
         TRIGGERED: begin // TRIGGERED state
             if (ring_tail < 31) begin
