@@ -1,6 +1,6 @@
 `include "tscache.v"
-`include "adc2.v"
-//`timescale 1ns / 1ps
+// `include "adc.v"
+`timescale 1ns / 1ps
 
 module tb;
 
@@ -22,27 +22,28 @@ wire [7:0] dat;
 reg sbf;
 reg [3:0] state; // Added signal to monitor TSC state
 
-
+// ADC adc_inst (
+//     .req(req),
+//     .rst(reset),
+//   	.rdy(rdy),
+//     .dat(adc_data)
+// );
+  
 // Instantiate the TSC and ADC modules
 TriggerSurroundCache tsc_inst (
     .reset(reset),
     .start(start),
     .clk(clk),
-    .adc_data(adc_data),
+  	.adc_data(adc_data),
     .req(req),
     .trd(trd),
     .cd(cd),
   	.sbf(sbf),
+  	.rdy(rdy),
     .trigtm(trigtm),
     .sd(sd)
 );
 
-ADC adc_inst (
-    .req(req),
-    .rst(reset),
-  	.rdy(rdy),
-    .dat(adc_data)
-);
 
 // Clock generation
 always #CLK_PERIOD clk = ~clk;
@@ -52,21 +53,22 @@ initial begin
   	integer i;
   	clk = 0;
   	sbf = 0;
-  	#10 start = 1;
-  	// read and display 10 values from ADC to see it is working
-  	$display("RDY\t	ADC_Data\t	TSC State");
-  	for (i=0; i<15; i++)	begin
-        // Send REQ pulse to ADC to read next value
-            req = 1;
-            #10; // Pulse width of 5 ns
-            req = 0;
-            #10
-            if (adc_data >= tsc_inst.TRIGVL) begin 
-              tsc_inst.current_state = tsc_inst.TRIGGERED;
-            end
-      // adc_data = dat;
-      // display the value
-      $display("%b\t\t %d\t\t\t %d",rdy,adc_data,state);               
+  	req = 0;
+  	reset = 1;
+  	#5 reset = 0;
+  	#20 start = 1;
+  	#20 start = 0;
+  	
+//   	// read and display 10 values from ADC to see it is working
+  	$display("RDY\t trd\t	cd\t	ADC_Data\t	TSC State\t");
+    for (i=0; i<16; i++)	begin
+      // Send REQ pulse to ADC to read next value
+      req = 1;
+      //       state = tsc_inst.current_state;
+      #5; // Pulse width of 5 ns
+      req = 0;
+      #5;
+      $display("%b\t %b\t\t %b\t\t %d\t\t\t %d",rdy,trd,cd,adc_data,state); 
     end    
   	#5
     reset = 1;
@@ -84,8 +86,8 @@ initial begin
 
     // Apply test vectors
     #10 start = 1; // Start TSC operation
-    #100 reset = 1;
-	#20;
+    #10 reset = 1;
+  	#100
 	$finish;
     // Continue applying test vectors...
 end
@@ -100,7 +102,7 @@ end
 //     $display("ADC Data: %h", adc_data);
 // end
   
-always @(posedge clk) begin
+always @* begin
     state <= tsc_inst.current_state;
 end
 

@@ -1,4 +1,5 @@
-//`timescale 1ns / 1ps
+`include "adc2.v"
+`timescale 1ns / 1ps
 
 module TriggerSurroundCache (
     input wire reset,       // reset when high
@@ -7,6 +8,7 @@ module TriggerSurroundCache (
     input wire [7:0] adc_data,  // data from ADC
     input wire req,         // request line to ADC
   	input wire sbf,
+  	input wire rdy,
     output reg trd,         // trigger detected
     output reg cd,          // completed data transfer
     output reg [31:0] trigtm,  // when trigger
@@ -24,13 +26,22 @@ reg [31:0] ring_buffer [0:31]; // circular ring buffer register
 reg [4:0] ring_head, ring_tail; // 5-bit wide buffer head and tail
 reg [7:0] trigger_threshold; // ADC threshold value for trigger
 reg [31:0] buffer_data; // circular ring buffer data register
+reg running; // Indicates whether the system is in the RUNNING state
+
 
 // Local parameters
-localparam       TRIGVL        = 8'hD5; // example threshold value
+localparam       TRIGVL        = 8'hD4; // example threshold value
 localparam [3:0] IDLE          = 4'b0000; // Idle state (default)
 localparam [3:0] RUNNING       = 4'b0001; // Running state
 localparam [3:0] TRIGGERED     = 4'b0010; // Trigger
 localparam [3:0] BUFFER_SEND   = 4'b0011; // Transmit data state
+
+ADC adc_inst (
+    .req(req),
+    .rst(reset),
+  	.rdy(rdy),
+    .dat(adc_data)
+);
   
 // State register
 always @(posedge clk or posedge reset) begin
@@ -42,12 +53,13 @@ always @(posedge clk or posedge reset) begin
         ring_head <= 5'b0; // head of FIFO
         ring_tail <= 5'b0; // tail of FIFO
         trigger_threshold <= TRIGVL; // check trigger value
+    	running <= 0;
     end 
-  	else if (sbf == 1'b1) begin 
-    	current_state <= BUFFER_SEND;
-    end
   	else begin
         current_state <= next_state;
+    end
+  	if (start && !running) begin
+		current_state <= RUNNING;
     end
 end
 
@@ -62,22 +74,28 @@ end
 always @* begin
     case (current_state)
         IDLE: begin // IDLE state
-            if (start) begin
+          if (start && !running) begin
                 next_state = RUNNING; // RUNNING state
-            end else if (req && (adc_data >= trigger_threshold)) begin
-                next_state = TRIGGERED; // TRIGGERED state
+                running = 1; // Set running flag
             end
-            else if (sbf == 1'b1) begin 
+            else if (sbf) begin 
     			current_state <= BUFFER_SEND;
             end else begin
                 next_state = IDLE; // IDLE state
             end
         end
-        RUNNING: begin // RUNNING state
+      RUNNING: begin // RUNNING state
             if (req && (adc_data >= trigger_threshold)) begin
                 next_state = TRIGGERED; // TRIGGERED state
+              	running <= 0;
             end else begin
                 next_state = RUNNING; // RUNNING state
+            end
+        	if (adc_data >= trigger_threshold) begin
+            	next_state = TRIGGERED;
+              	running <= 0;
+          	end else begin
+              	next_state = RUNNING;
             end
         end
         TRIGGERED: begin // TRIGGERED state
@@ -86,7 +104,7 @@ always @* begin
                 ring_tail <= ring_tail + 1;
             end
             if (ring_tail == 31) begin
-                next_state = BUFFER_SEND; // BUFFER_SEND state
+              next_state = BUFFER_SEND; // BUFFER_SEND state
             end else begin
                 next_state = TRIGGERED; // TRIGGERED state
             end
@@ -98,9 +116,8 @@ always @* begin
             end
             if (ring_head == 31) begin
                 cd <= 1'b1;
-            end
-            if (cd) begin
-                next_state = IDLE; // IDLE state
+                next_state = IDLE;// IDLE state
+//               	running <= 0;
             end else begin
                 next_state = BUFFER_SEND; // BUFFER_SEND state
             end
