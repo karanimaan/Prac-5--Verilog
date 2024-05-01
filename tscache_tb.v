@@ -48,30 +48,29 @@ initial begin
   	clk = 0;
   	sbf = 0;
   	req = 0;
-  	reset = 1;
-  	#5 reset = 0;
-  	#20 start = 1;
-  	#20 start = 0;
+
+
+  	$display("reset\t start \t state");
+  	$monitor("%b \t %b \t %d", reset, start, state);
+
+    start = 0;
+    reset = 0;
+
+  	#20 start = 1; #20 start = 0;
+    reset = 1; #5 reset = 0;
+
   	
 //   	// read and display 10 values from ADC to see it is working
-  	$display("RDY\t trd\t	cd\t	ADC_Data\t	TSC State\t");
-    for (i=0; i<16; i++)	begin
 
-        // Start TSC if idle
-        if (state == 0)
-            begin
-                start = 1;
-                #20 start = 0;
-            end
 
-        // Send REQ pulse to ADC to read next value
-        req = 1;
-        //       state = tsc_inst.current_state;
-        #5; // Pulse width of 5 ns
-        req = 0;
-        #5;
-        $display("%b\t %b\t\t %b\t\t %d\t\t\t %d",rdy,trd,cd,adc_data,state);
-    end
+    // Send REQ pulse to ADC to read next value
+    req = 1;
+    //       state = tsc_inst.current_state;
+    #5; // Pulse width of 5 ns
+    req = 0;
+    #5;
+
+
 
   	#5
 
@@ -96,10 +95,6 @@ initial begin
     // Continue applying test vectors...
 end
   
-initial begin
-    $dumpfile("dump.vcd");
-  	$dumpvars;
-end
 
 
 
